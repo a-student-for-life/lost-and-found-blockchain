@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lost &amp; Found on Blockchain</title>
+<meta name="description" content="Privacy-friendly lost-and-found on Ethereum Sepolia. Only a hash of the owner's secret detail goes on chain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ink:#11202B; --ink2:#33444F; --muted:#5B6B76; --bg:#F5F2EA; --card:#FFFDF8; --line:#DAD4C4;
+  --amber:#F0A93B; --amber-soft:#FCEBCC; --teal:#1F7F74; --teal-soft:#D8EFEB;
+  --red:#B4372B; --red-soft:#F8DEDA; --blue:#2B5D9B; --blue-soft:#DCE7F5;
+  --radius:16px; --mono:'JetBrains Mono','Courier New',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',Arial,sans-serif;font-size:16px;line-height:1.5}
+a{color:var(--teal)}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+
+header.top{background:var(--ink);color:#F5F2EA;position:sticky;top:0;z-index:20;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.top .bar{display:flex;align-items:center;gap:12px;min-height:60px;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;margin-right:auto}
+.brand .logo{width:32px;height:32px;border-radius:9px;background:var(--amber);color:var(--ink);display:grid;place-items:center;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.chip.ok{background:#1F3B35;color:#7FE0CF}
+.chip.warn{background:#4A3413;color:#F7C77A}
+.roles{display:flex;gap:6px;padding-bottom:12px;overflow-x:auto}
+.roles .lbl{color:#BFD0D6;font-size:14px;align-self:center;white-space:nowrap;margin-right:4px}
+.roles button{border:2px solid #3A4C58;background:transparent;color:#F5F2EA;border-radius:12px;padding:8px 14px;font-weight:700;font-size:15px;white-space:nowrap;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.roles button small{font-weight:400;font-size:12px;color:#BFD0D6;font-family:var(--mono)}
+.roles button.on{background:var(--amber);border-color:var(--amber);color:var(--ink)}
+.roles button.on small{color:#3F2A05}
+
+.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.primary{background:var(--amber);color:var(--ink)}
+.btn.dark{background:var(--ink);color:#F5F2EA}
+.btn.teal{background:var(--teal);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.small{padding:7px 12px;font-size:14px;border-radius:10px}
+.btn.block{width:100%}
+
+#notices{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.notice{border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:2px solid}
+.notice p{margin:0;flex:1;min-width:220px}
+.notice.warn{background:var(--amber-soft);border-color:#EBC27C}
+.notice.bad{background:var(--red-soft);border-color:#E7AFA7}
+
+.panel{background:var(--card);border:2px solid var(--line);border-radius:var(--radius);padding:20px}
+.panel h2{margin:0 0 4px;font-size:22px}
+.panel h3{margin:0;font-size:18px}
+.sub{color:var(--muted);margin:0}
+.hero{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:20px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.step{background:var(--bg);border-radius:12px;padding:12px}
+.step b{display:block;font-size:15px}
+.step span{font-size:13.5px;color:var(--ink2)}
+.step .n{font-family:var(--mono);color:var(--teal);font-weight:600;font-size:13px}
+.role .who{font-size:26px;font-weight:700;margin:2px 0 6px}
+.role p{margin:6px 0 0}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700}
+.b-lost{background:var(--amber-soft);color:#7A4A06}
+.b-found{background:var(--blue-soft);color:var(--blue)}
+.b-claimed{background:var(--teal-soft);color:#155A52}
+.b-returned{background:#E4E1D8;color:#3F4A51}
+.b-you{background:var(--ink);color:#F5F2EA}
+.mono{font-family:var(--mono);font-size:13.5px;word-break:break-all}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;margin-top:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card-head .ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+.ico.a{background:var(--amber-soft)} .ico.t{background:var(--teal-soft)} .ico.d{background:var(--ink);color:var(--amber)}
+label{display:block;font-weight:700;font-size:14px;margin:12px 0 6px}
+.hint{font-size:13.5px;color:var(--muted);margin:6px 0 0}
+input[type=text],select,textarea{width:100%;border:2px solid var(--line);border-radius:12px;padding:11px 12px;background:#fff;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--teal)}
+textarea{resize:vertical;min-height:76px}
+.hashbox{margin-top:10px;background:var(--ink);color:#BFD0D6;border-radius:12px;padding:10px 12px}
+.hashbox .mono{color:var(--amber)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.locked{background:var(--bg);border-radius:12px;padding:14px;color:var(--ink2);font-size:15px}
+.result{margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:700;display:none}
+.result.show{display:block}
+.result.good{background:var(--teal-soft);color:#155A52}
+.result.bad{background:var(--red-soft);color:var(--red)}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters button{border:2px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:14px;font-weight:500}
+.filters button.on{background:var(--ink);color:#F5F2EA;border-color:var(--ink)}
+#items{display:flex;flex-direction:column;gap:12px}
+.item{border:2px solid var(--line);border-radius:14px;padding:14px;background:#fff}
+.item-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.item-top .id{font-family:var(--mono);font-weight:600;color:var(--muted)}
+.item-top .cat{font-weight:700;font-size:18px;margin-right:auto}
+.track{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:12px 0 4px}
+.track div{height:6px;border-radius:4px;background:#E7E2D5}
+.track div.on{background:var(--teal)}
+.track-labels{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:12.5px;color:var(--muted)}
+.track-labels span.on{color:var(--ink);font-weight:700}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:10px 0 0}
+.facts dt{color:var(--muted)} .facts dd{margin:0}
+.item-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+
+.setup{margin-top:20px}
+.setup .big{font-size:28px;font-weight:700;margin:0 0 6px}
+.setupstep{display:flex;gap:14px;align-items:flex-start;margin-top:18px;padding:16px;border-radius:14px;background:#fff;border:2px solid var(--line)}
+.setupstep.done{opacity:.6}
+.setupstep .num{width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--amber);display:grid;place-items:center;font-weight:700;flex:none}
+.setupstep.done .num{background:var(--teal);color:#fff}
+.setupstep .body{flex:1;min-width:0}
+.addrbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:10px}
+.addrbox .mono{flex:1;min-width:200px;font-size:15px}
+
+dialog{border:0;border-radius:18px;padding:0;max-width:460px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(17,32,43,.35)}
+dialog::backdrop{background:rgba(17,32,43,.55)}
+.dlg{padding:22px}
+.dlg h3{margin:0 0 4px;font-size:20px}
+.dlg .row{margin-top:16px;justify-content:flex-end}
+
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:10px;z-index:50;max-width:min(380px,calc(100% - 32px))}
+.toast{background:var(--ink);color:#F5F2EA;border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);border-left:6px solid var(--amber)}
+.toast b{display:block}
+.toast span{font-size:14px;color:#BFD0D6}
+.toast a{color:var(--amber)}
+.toast.ok{border-left-color:#3FB8A8}
+.toast.bad{border-left-color:#E0675A}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #BFD0D6;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;margin-right:6px;vertical-align:-1px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+details.help{margin-top:16px}
+details.help summary{cursor:pointer;font-weight:700;font-size:18px}
+.help ol,.help ul{padding-left:20px;margin:10px 0 0} .help li{margin:6px 0}
+table.acc{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+table.acc td,table.acc th{text-align:left;padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+footer{margin:24px 0 40px;color:var(--muted);font-size:14px}
+.recent{margin-top:12px;font-size:14px}
+.recent div{padding:6px 0;border-top:1px solid var(--line)}
+
+@media (max-width:900px){ .hero,.main{grid-template-columns:1fr} .steps{grid-template-columns:1fr 1fr} }
+@media (max-width:520px){ .roles{display:grid;grid-template-columns:1fr 1fr} .roles .lbl{display:none} .roles button{align-items:center} .brand .long{display:none} .facts{grid-template-columns:1fr} .facts dt{margin-top:4px} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <div class="brand"><div class="logo">L</div><span>Lost &amp; Found <span class="long">on Blockchain</span></span></div>
+      <span id="netChip" class="chip warn"><span class="dot"></span><span>Connecting…</span></span>
+    </div>
+    <div class="roles" id="roles"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="notices"></div>
+
+  <section id="setup" class="setup" hidden>
+    <div class="panel">
+      <p class="big">One-time setup</p>
+      <p class="sub">Only one person does this, once. After that, everyone who opens this page on any phone or laptop sees the same contract and items.</p>
+      <div class="setupstep" id="ss1">
+        <div class="num">1</div>
+        <div class="body">
+          <h3>Give the Desk account some free test ETH</h3>
+          <p class="sub">Every action costs a tiny fee in test ETH (not real money). Open the faucet, paste the Desk address below and request Sepolia ETH. The page notices by itself when it arrives.</p>
+          <div class="addrbox"><span class="mono" id="deskAddr"></span><button class="btn ghost small" data-copy="desk">Copy</button><a class="btn dark small" href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noopener">Open faucet</a></div>
+          <p class="hint" id="deskBal">Checking balance…</p>
+        </div>
+      </div>
+      <div class="setupstep" id="ss2">
+        <div class="num">2</div>
+        <div class="body">
+          <h3>Deploy the contract</h3>
+          <p class="sub">Same contract as in Remix. The Desk account becomes the custodian.</p>
+          <div class="row" style="margin-top:12px"><button id="deployBtn" class="btn primary" data-tx>Deploy contract</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="app" hidden>
+    <section class="hero">
+      <div class="panel">
+        <h2>How it works</h2>
+        <p class="sub">The item’s private details never go on the blockchain. Only a hash (a fingerprint) of a secret detail does.</p>
+        <div class="steps">
+          <div class="step"><span class="n">01 · OWNER</span><b>Report it</b><span>Type a secret only you know. Only its hash is stored.</span></div>
+          <div class="step"><span class="n">02 · DESK</span><b>Mark found</b><span>The finder hands it in. The desk records the finder.</span></div>
+          <div class="step"><span class="n">03 · OWNER</span><b>Claim it</b><span>Type the same secret. The contract checks the hash.</span></div>
+          <div class="step"><span class="n">04 · DESK</span><b>Mark returned</b><span>The desk closes the case after handing it over.</span></div>
+        </div>
+      </div>
+      <div class="panel role" id="rolePanel"></div>
+    </section>
+
+    <section class="main">
+      <div class="col">
+        <div class="panel" id="reportCard">
+          <div class="card-head"><div class="ico a">🧳</div><div><h3>I lost something</h3><p class="sub">Report it without revealing the details.</p></div></div>
+          <label for="cat">What is it?</label>
+          <select id="cat">
+            <option>Wallet</option><option>Phone</option><option>Keys</option><option>Bag</option>
+            <option>ID card</option><option>Laptop</option><option>Earphones</option><option>Water bottle</option><option value="__other">Something else…</option>
+          </select>
+          <input id="catOther" type="text" placeholder="Type the item, e.g. Umbrella" style="margin-top:8px" hidden>
+          <p class="hint">This part is public, so keep it general.</p>
+          <label for="secret">Secret detail only you know</label>
+          <textarea id="secret" placeholder="e.g. black leather, scratch near zip, library card ending 7741"></textarea>
+          <p class="hint">Use 2–3 details together so nobody can guess it, and remember it. You type the same thing to claim. Capitals and extra spaces don’t matter.</p>
+          <div class="hashbox"><div style="font-size:13px">What actually goes on the blockchain:</div><div id="hashPreview" class="mono">—</div></div>
+          <div class="row" style="margin-top:14px"><button id="reportBtn" class="btn primary block" data-tx>Report lost item</button></div>
+        </div>
+
+        <div class="panel" id="claimCard">
+          <div class="card-head"><div class="ico t">🔑</div><div><h3>Claim an item</h3><p class="sub">Prove it’s yours with the secret detail.</p></div></div>
+          <label for="claimItem">Which item?</label>
+          <select id="claimItem"></select>
+          <p class="hint">Only items the desk has marked found can be claimed.</p>
+          <label for="claimSecret">Secret detail</label>
+          <textarea id="claimSecret" placeholder="Type the secret used when reporting"></textarea>
+          <div class="row" style="margin-top:14px"><button id="claimBtn" class="btn teal block" data-tx>Claim item</button></div>
+          <div id="claimResult" class="result"></div>
+        </div>
+
+        <div class="panel" id="deskCard">
+          <div class="card-head"><div class="ico d">🏷️</div><div><h3>Lost-and-found desk</h3><p class="sub">Only the Desk account is allowed to do these.</p></div></div>
+          <div id="deskBody"></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="panel">
+          <div class="card-head" style="justify-content:space-between">
+            <div><h3>All items</h3><p class="sub" id="liveNote">Updates automatically.</p></div>
+            <span id="countBadge" class="badge b-returned">0 items</span>
+          </div>
+          <div class="filters" id="filters">
+            <button data-f="all" class="on">All</button><button data-f="0">Lost</button><button data-f="1">Found</button><button data-f="2">Claimed</button><button data-f="3">Returned</button>
+          </div>
+          <div id="items"><div class="empty">Loading…</div></div>
+        </div>
+        <div class="panel">
+          <h3>Recent transactions on this device</h3>
+          <p class="sub">Each one opens on Etherscan, the public Sepolia explorer.</p>
+          <div id="recent" class="recent"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <details class="help panel">
+    <summary>About the demo accounts</summary>
+    <p class="sub" style="margin-top:8px">These four accounts are built into the page so nobody has to install anything. Everyone who opens the link shares them. The roles behave exactly like switching accounts in Remix.</p>
+    <table class="acc" id="accTable"></table>
+    <ul>
+      <li>They only hold free Sepolia test ETH. Never send real ETH to them: their keys are inside this page, so anyone could use them.</li>
+      <li>Only the Desk needs funding from the faucet. Before another role acts, the page tops it up from the Desk automatically.</li>
+      <li>If the Desk runs low, the page shows a warning. Request more from the faucet the same way.</li>
+    </ul>
+  </details>
+
+  <footer>
+    <div id="contractInfo"></div>
+    <p>Data lives on the Sepolia test network, so it stays saved even when this page, Remix or the laptop is closed.</p>
+  </footer>
+</main>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+<div id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+(() => {
+'use strict';
+const CFG = {
+  chainId: 11155111,
+  rpcs: window.__LF_RPCS || ['https://ethereum-sepolia-rpc.publicnode.com', 'https://sepolia.drpc.org', 'https://1rpc.io/sepolia'],
+  explorer: 'https://sepolia.etherscan.io',
+  DEFAULT_CONTRACT: '',
+  POLL_MS: window.__LF_POLL || 6000,
+};
+// Shared demo accounts for the Sepolia TEST network only. They hold free test ETH, never real money.
+const ROLES = [{"k":"desk","pk":"0x1f096f34af9d61d6bc1a7a49fb3017df13267d42ae5f45eaf5b355a50bc3e771"},{"k":"owner","pk":"0x4a80c3487107f5a96e794ff0d88d77bfe7cc274f4caba9d35c6d07808b08b403"},{"k":"finder","pk":"0x76236162f79e53553479bdf9f406c13c97a2dc565938aff9038bb1a85f83ee2b"},{"k":"other","pk":"0x08783059c01e08ced5c525bd2f9a5f99574aeaa5cc17eb25f0a12b58a4414fe9"}];
+const ROLE_INFO = {
+  desk: { name: 'Desk', long: 'Lost-and-found desk', text: 'You are the custodian. You mark items found when a finder hands them in, and mark them returned after giving them back.' },
+  owner: { name: 'Owner', long: 'Owner', text: 'You lost something. Report it with a secret detail, then claim it with the same secret once the desk has it.' },
+  finder: { name: 'Finder', long: 'Finder', text: 'You found an item and handed it to the desk. You get recorded on the item, but you can’t claim it.' },
+  other: { name: 'Someone else', long: 'Someone else', text: 'A random person. Try claiming an item with a guess and watch the contract reject it.' },
+};
+const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"itemId","type":"uint256"},{"indexed":false,"internalType":"address","name":"claimant","type":"address"}],"name":"ItemClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"itemId","type":"uint256"},{"indexed":false,"internalType":"address","name":"finder","type":"address"}],"name":"ItemFound","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"itemId","type":"uint256"},{"indexed":false,"internalType":"string","name":"category","type":"string"}],"name":"ItemReported","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"itemId","type":"uint256"},{"indexed":false,"internalType":"address","name":"claimant","type":"address"},{"indexed":false,"internalType":"address","name":"finder","type":"address"}],"name":"ItemReturned","type":"event"},{"inputs":[{"internalType":"uint256","name":"itemId","type":"uint256"},{"internalType":"string","name":"secretDetail","type":"string"}],"name":"claimItem","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"custodian","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"secretDetail","type":"string"}],"name":"getHash","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"pure","type":"function"},{"inputs":[],"name":"itemCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"items","outputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"string","name":"category","type":"string"},{"internalType":"bytes32","name":"secretHash","type":"bytes32"},{"internalType":"enum SimpleLostAndFound.Status","name":"status","type":"uint8"},{"internalType":"address","name":"finder","type":"address"},{"internalType":"address","name":"claimant","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"itemId","type":"uint256"},{"internalType":"address","name":"finder","type":"address"}],"name":"markFound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"itemId","type":"uint256"}],"name":"markReturned","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"category","type":"string"},{"internalType":"bytes32","name":"secretHash","type":"bytes32"}],"name":"reportLost","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+const BYTECODE = '0x608060405234801561001057600080fd5b50600080546001600160a01b03191633179055610c49806100326000396000f3fe608060405234801561001057600080fd5b50600436106100885760003560e01c80636bfb0d011161005b5780636bfb0d0114610106578063bfb231d21461010f578063de7bb37c14610134578063fb9d5aac1461014757600080fd5b806335ffa3d01461008d578063375b74c3146100a25780635b6beeb9146100d25780636298913f146100f3575b600080fd5b6100a061009b36600461087e565b61015a565b005b6000546100b5906001600160a01b031681565b6040516001600160a01b0390911681526020015b60405180910390f35b6100e56100e03660046108c5565b610314565b6040519081526020016100c9565b6100a0610101366004610902565b610344565b6100e560015481565b61012261011d366004610902565b610487565b6040516100c996959493929190610981565b6100a06101423660046109eb565b61055f565b6100a0610155366004610a27565b6106a2565b6000828152600260205260409020600160038083015460ff16908111156101835761018361096b565b146101d55760405162461bcd60e51b815260206004820152601e60248201527f4974656d206973206e6f7420617661696c61626c6520746f20636c61696d000060448201526064015b60405180910390fd5b600381015461010090046001600160a01b031633036102365760405162461bcd60e51b815260206004820152601c60248201527f46696e6465722063616e6e6f7420636c61696d20746865206974656d0000000060448201526064016101cc565b80600201548260405160200161024c9190610a6c565b60405160208183030381529060405280519060200120146102af5760405162461bcd60e51b815260206004820152601c60248201527f57726f6e672064657461696c2c20636c61696d2072656a65637465640000000060448201526064016101cc565b60038101805460ff191660021790556004810180546001600160a01b031916339081179091556040805185815260208101929092527ff13adb02c379c5db4cd5a23aa9bca3fd0b3e0017c82d0aac2e656994f24d0535910160405180910390a1505050565b6000816040516020016103279190610a6c565b604051602081830303815290604052805190602001209050919050565b6000546001600160a01b0316331461039e5760405162461bcd60e51b815260206004820152601e60248201527f4f6e6c792074686520637573746f6469616e2063616e20646f2074686973000060448201526064016101cc565b6002600082815260026020526040902060039081015460ff16908111156103c7576103c761096b565b1461040c5760405162461bcd60e51b8152602060048201526015602482015274139bc81d995c9a599a59590818db185a5b481e595d605a1b60448201526064016101cc565b6000818152600260209081526040918290206003808201805460ff19169091179081905560049091015483518581526001600160a01b0391821693810193909352610100909104168183015290517f402b48ef0aadbbf1d3dfb5ff08b695b1858c82283d88f306f663c2601763d6469181900360600190a150565b600260205260009081526040902080546001820180546001600160a01b0390921692916104b390610a88565b80601f01602080910402602001604051908101604052809291908181526020018280546104df90610a88565b801561052c5780601f106105015761010080835404028352916020019161052c565b820191906000526020600020905b81548152906001019060200180831161050f57829003601f168201915b505050600284015460038501546004909501549394909360ff821693506001600160a01b03610100909204821692501686565b6000546001600160a01b031633146105b95760405162461bcd60e51b815260206004820152601e60248201527f4f6e6c792074686520637573746f6469616e2063616e20646f2074686973000060448201526064016101cc565b600082815260026020526040812060039081015460ff16908111156105e0576105e061096b565b1461062d5760405162461bcd60e51b815260206004820152601960248201527f4974656d206973206e6f7420696e204c6f73742073746174650000000000000060448201526064016101cc565b60008281526002602090815260409182902060030180546001600160a01b03851661010081026001600160a81b0319909216919091176001179091558251858152918201527f92022499f0b7176e73d1c6cad3972003a256210899adf2e2a6541e97887360aa91015b60405180910390a15050565b600180549060006106b283610ac2565b90915550506040805160c0810182523381526020810184905290810182905260608101600081526000602080830182905260409283018290526001805483526002825292909120835181546001600160a01b0319166001600160a01b039091161781559083015190918201906107289082610b3a565b506040820151816002015560608201518160030160006101000a81548160ff0219169083600381111561075d5761075d61096b565b02179055506080820151600382018054610100600160a81b0319166101006001600160a01b039384160217905560a090920151600490910180546001600160a01b031916919092161790556001546040517f79274b99c7188988478828e0c52971307b8a6fdaee19bf16e14df160589eb1ee91610696918590610bfa565b634e487b7160e01b600052604160045260246000fd5b600082601f83011261080257600080fd5b813567ffffffffffffffff8082111561081d5761081d6107db565b604051601f8301601f19908116603f01168101908282118183101715610845576108456107db565b8160405283815286602085880101111561085e57600080fd5b836020870160208301376000602085830101528094505050505092915050565b6000806040838503121561089157600080fd5b82359150602083013567ffffffffffffffff8111156108af57600080fd5b6108bb858286016107f1565b9150509250929050565b6000602082840312156108d757600080fd5b813567ffffffffffffffff8111156108ee57600080fd5b6108fa848285016107f1565b949350505050565b60006020828403121561091457600080fd5b5035919050565b60005b8381101561093657818101518382015260200161091e565b50506000910152565b6000815180845261095781602086016020860161091b565b601f01601f19169290920160200192915050565b634e487b7160e01b600052602160045260246000fd5b600060018060a01b03808916835260c060208401526109a360c084018961093f565b9150866040840152600486106109c957634e487b7160e01b600052602160045260246000fd5b856060840152808516608084015280841660a084015250979650505050505050565b600080604083850312156109fe57600080fd5b8235915060208301356001600160a01b0381168114610a1c57600080fd5b809150509250929050565b60008060408385031215610a3a57600080fd5b823567ffffffffffffffff811115610a5157600080fd5b610a5d858286016107f1565b95602094909401359450505050565b60008251610a7e81846020870161091b565b9190910192915050565b600181811c90821680610a9c57607f821691505b602082108103610abc57634e487b7160e01b600052602260045260246000fd5b50919050565b600060018201610ae257634e487b7160e01b600052601160045260246000fd5b5060010190565b601f821115610b35576000816000526020600020601f850160051c81016020861015610b125750805b601f850160051c820191505b81811015610b3157828155600101610b1e565b5050505b505050565b815167ffffffffffffffff811115610b5457610b546107db565b610b6881610b628454610a88565b84610ae9565b602080601f831160018114610b9d5760008415610b855750858301515b600019600386901b1c1916600185901b178555610b31565b600085815260208120601f198616915b82811015610bcc57888601518255948401946001909101908401610bad565b5085821015610bea5787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b8281526040602082015260006108fa604083018461093f56fea2646970667358221220d83284e938fe991f43b8d5e4d1a6f07438654c4e1079b7b235573079e669782964736f6c63430008180033';
+const STATUS = ['Lost', 'Found', 'Claimed', 'Returned'];
+const BADGE = ['b-lost', 'b-found', 'b-claimed', 'b-returned'];
+const ZERO = '0x0000000000000000000000000000000000000000';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
+const same = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('lf2.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('lf2.' + k, JSON.stringify(v)); } catch {} },
+};
+
+if (!window.ethers) {
+  $('notices').innerHTML = '<div class="notice bad"><p>The page could not load. Check the internet connection and refresh.</p></div>';
+  return;
+}
+
+/* ---------- provider and wallets ---------- */
+const net = ethers.Network.from(CFG.chainId);
+const provider = CFG.rpcs.length === 1
+  ? new ethers.JsonRpcProvider(CFG.rpcs[0], net, { staticNetwork: net, polling: true, pollingInterval: 1500 })
+  : new ethers.FallbackProvider(CFG.rpcs.map((u, i) => ({ provider: new ethers.JsonRpcProvider(u, net, { staticNetwork: net }), priority: i + 1, stallTimeout: 2500, weight: 1 })), net, { quorum: 1, pollingInterval: 2000 });
+const W = {};
+for (const r of ROLES) W[r.k] = new ethers.Wallet(r.pk, provider);
+const ADDR = Object.fromEntries(ROLES.map((r) => [r.k, W[r.k].address]));
+const roleOf = (a) => ROLES.find((r) => same(ADDR[r.k], a))?.k || null;
+const nameOf = (a) => { const k = roleOf(a); return k ? ROLE_INFO[k].name : short(a); };
+
+const S = {
+  role: store.get('role', 'owner'), address: null, custodian: null, items: [], bal: {},
+  lastSig: '', filter: 'all', loaded: false, readErr: null, busy: false, online: false,
+};
+if (!ADDR[S.role]) S.role = 'owner';
+
+/* ---------- find the shared contract ---------- */
+// The Desk deploys it, so its address is predictable from the Desk's transaction count.
+async function findContract() {
+  const cached = store.get('contract', null);
+  const cands = [];
+  if (CFG.DEFAULT_CONTRACT && ethers.isAddress(CFG.DEFAULT_CONTRACT)) cands.push(CFG.DEFAULT_CONTRACT);
+  if (cached && ethers.isAddress(cached)) cands.push(cached);
+  const nonce = await provider.getTransactionCount(ADDR.desk, 'latest');
+  for (let n = 0; n < Math.min(nonce, 40); n++) cands.push(ethers.getCreateAddress({ from: ADDR.desk, nonce: n }));
+  for (const a of [...new Set(cands)]) {
+    const code = await provider.getCode(a);
+    if (code && code !== '0x') {
+      try { const c = new ethers.Contract(a, ABI, provider); const cust = await c.custodian(); if (same(cust, ADDR.desk)) return ethers.getAddress(a); } catch {}
+    }
+  }
+  return null;
+}
+
+/* ---------- reading ---------- */
+async function refresh() {
+  try {
+    if (!S.address) S.address = await findContract();
+    if (S.address) store.set('contract', S.address);
+    const bals = await Promise.all(ROLES.map((r) => provider.getBalance(ADDR[r.k])));
+    ROLES.forEach((r, i) => S.bal[r.k] = bals[i]);
+    if (S.address) {
+      const c = new ethers.Contract(S.address, ABI, provider);
+      const [cust, countBn] = await Promise.all([c.custodian(), c.itemCount()]);
+      const ids = Array.from({ length: Number(countBn) }, (_, i) => i + 1);
+      const rows = await Promise.all(ids.map((id) => c.items(id)));
+      S.custodian = ethers.getAddress(cust);
+      S.items = rows.map((r, i) => ({ id: ids[i], owner: r.owner, category: r.category, secretHash: r.secretHash, status: Number(r.status), finder: r.finder, claimant: r.claimant }));
+    }
+    S.readErr = null; S.loaded = true; S.online = true;
+  } catch (e) { S.readErr = e; S.online = false; }
+  render();
+}
+
+/* ---------- gas top-up from the Desk ---------- */
+async function feeFor(est) {
+  const fd = await provider.getFeeData();
+  const price = fd.maxFeePerGas || fd.gasPrice || ethers.parseUnits('20', 'gwei');
+  return (est * 13n / 10n) * price;
+}
+async function ensureGas(roleKey, est, t) {
+  const need = await feeFor(est);
+  const have = await provider.getBalance(ADDR[roleKey]);
+  if (have >= need) return true;
+  if (roleKey === 'desk') throw new Error('DESK_EMPTY');
+  const amount = need * 6n;
+  const deskBal = await provider.getBalance(ADDR.desk);
+  const transferFee = await feeFor(21000n);
+  if (deskBal < amount + transferFee) throw new Error('DESK_EMPTY');
+  t.set('Topping up test ETH', 'Sending a little test ETH from the Desk to ' + ROLE_INFO[roleKey].name + ' for the fee…', 'wait');
+  const tx = await W.desk.sendTransaction({ to: ADDR[roleKey], value: amount });
+  await tx.wait();
+  return true;
+}
+
+/* ---------- writing ---------- */
+async function runTx(title, roleKey, method, args, onDone) {
+  if (S.busy) { toast('One moment', 'Another transaction is still in progress.', 'bad'); return false; }
+  S.busy = true; setBusy(true);
+  const t = toast(title, 'Checking with the contract…', 'wait');
+  try {
+    const c = new ethers.Contract(S.address, ABI, W[roleKey]);
+    let est;
+    try { await c[method].staticCall(...args); est = await c[method].estimateGas(...args); }
+    catch (e) { t.set(title + ': rejected', esc(friendly(e)) + '<br><i>No transaction was sent, so no fee was used.</i>', 'bad', 10000); return { rejected: friendly(e) }; }
+    await ensureGas(roleKey, est, t);
+    t.set(title, 'Sending to Sepolia…', 'wait');
+    const tx = await c[method](...args);
+    addRecent(title + ' (' + ROLE_INFO[roleKey].name + ')', tx.hash);
+    t.set(title, 'Sent. Confirming on Sepolia (about 15 seconds)… ' + txLink(tx.hash), 'wait');
+    await tx.wait();
+    t.set(title + ': done', 'Saved on the blockchain. ' + txLink(tx.hash), 'ok', 7000);
+    if (onDone) onDone();
+    await refresh();
+    return { ok: true };
+  } catch (e) {
+    t.set(title + ': failed', esc(friendly(e)), 'bad', 10000);
+    return { failed: true };
+  } finally { S.busy = false; setBusy(false); }
+}
+
+const REASONS = {
+  'Only the custodian can do this': 'Only the Desk (custodian) can do this. Switch to Desk at the top.',
+  'Finder cannot claim the item': 'The Finder can’t claim the item they found.',
+  'Wrong detail, claim rejected': 'That secret detail doesn’t match the stored hash. Claim rejected.',
+  'Item is not in Lost state': 'This item isn’t in the Lost state any more.',
+  'Item is not available to claim': 'This item can’t be claimed yet. The Desk must mark it found first.',
+  'No verified claim yet': 'Nobody has proved ownership yet, so it can’t be marked returned.',
+};
+function friendly(e) {
+  if (!e) return 'Something went wrong.';
+  const msg = [e.reason, e.shortMessage, e.message, e.info && e.info.error && e.info.error.message, e.error && e.error.message].filter(Boolean).join(' | ');
+  if (msg.includes('DESK_EMPTY')) return 'The Desk account is out of test ETH. Request more from the faucet (see the warning at the top).';
+  for (const k of Object.keys(REASONS)) if (msg.includes(k)) return REASONS[k];
+  if (e.code === 'INSUFFICIENT_FUNDS' || /insufficient funds/i.test(msg)) return 'Not enough test ETH for the fee. Request more for the Desk from the faucet.';
+  if (e.code === 'NETWORK_ERROR' || e.code === 'TIMEOUT' || /failed to fetch|network/i.test(msg)) return 'Couldn’t reach Sepolia. Check the internet connection and try again.';
+  if (e.reason) return e.reason;
+  if (e.shortMessage) return e.shortMessage;
+  return String(e.message || e).slice(0, 200);
+}
+const txLink = (h) => '<a href="' + CFG.explorer + '/tx/' + h + '" target="_blank" rel="noopener">View on Etherscan</a>';
+const addrLink = (a) => '<a href="' + CFG.explorer + '/address/' + a + '" target="_blank" rel="noopener">' + esc(nameOf(a)) + '</a>';
+
+/* ---------- secret hashing ---------- */
+const norm = (s) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+const hashOf = (s) => ethers.keccak256(ethers.toUtf8Bytes(s));
+
+/* ---------- actions ---------- */
+async function doReport() {
+  const sel = $('cat').value;
+  const category = (sel === '__other' ? $('catOther').value : sel).trim();
+  const secret = $('secret').value;
+  if (!category) return toast('Missing item', 'Say what the item is.', 'bad');
+  if (norm(secret).length < 8) return toast('Secret too short', 'Use at least 8 characters, ideally 2–3 details together.', 'bad');
+  await runTx('Report ' + category, S.role, 'reportLost', [category, hashOf(norm(secret))], () => { $('secret').value = ''; updateHash(); });
+}
+
+async function doClaim() {
+  const id = Number($('claimItem').value);
+  const raw = $('claimSecret').value;
+  const res = $('claimResult');
+  res.className = 'result';
+  if (!id) return toast('Pick an item', 'Choose which item to claim.', 'bad');
+  if (!raw.trim()) return toast('Missing secret', 'Type the secret detail.', 'bad');
+  // Try the page's normalised form first, then the exact text (for items reported directly in Remix).
+  const c = new ethers.Contract(S.address, ABI, W[S.role]);
+  let chosen = null;
+  for (const s of [...new Set([norm(raw), raw.trim(), raw])]) {
+    try { await c.claimItem.staticCall(id, s); chosen = s; break; } catch (e) { if (!friendly(e).includes('doesn’t match')) break; }
+  }
+  const r = await runTx('Claim item #' + id, S.role, 'claimItem', [id, chosen === null ? norm(raw) : chosen], () => { $('claimSecret').value = ''; });
+  if (r.ok) { res.textContent = '✓ Ownership proved. Item #' + id + ' is now Claimed. Collect it from the desk.'; res.className = 'result show good'; }
+  else if (r.rejected) { res.textContent = '✗ ' + r.rejected; res.className = 'result show bad'; }
+}
+
+async function doDeploy() {
+  if (S.busy) return;
+  S.busy = true; setBusy(true);
+  const t = toast('Deploying contract', 'Sending from the Desk account…', 'wait');
+  try {
+    const f = new ethers.ContractFactory(ABI, BYTECODE, W.desk);
+    const est = await provider.estimateGas(await f.getDeployTransaction().then((tx) => ({ ...tx, from: ADDR.desk })));
+    await ensureGas('desk', est, t);
+    const c = await f.deploy();
+    const tx = c.deploymentTransaction();
+    if (tx) addRecent('Deploy contract (Desk)', tx.hash);
+    t.set('Deploying contract', 'Sent. Confirming on Sepolia (about 15 seconds)…' + (tx ? ' ' + txLink(tx.hash) : ''), 'wait');
+    await c.waitForDeployment();
+    S.address = await c.getAddress();
+    store.set('contract', S.address);
+    t.set('Contract deployed', 'All set. Everyone who opens this page now sees this contract.', 'ok', 8000);
+    await refresh();
+  } catch (e) { t.set('Deploy failed', esc(friendly(e)), 'bad', 10000); }
+  finally { S.busy = false; setBusy(false); }
+}
+
+function dlgFound(id) {
+  const it = S.items.find((x) => x.id === id);
+  const opts = ROLES.filter((r) => r.k !== 'desk').map((r) => '<option value="' + r.k + '"' + (r.k === 'finder' ? ' selected' : '') + '>' + ROLE_INFO[r.k].name + ' (' + short(ADDR[r.k]) + ')</option>').join('');
+  openDialog('<h3>Mark item #' + id + ' as found</h3><p class="sub">' + esc(it ? it.category : '') + '. Who handed it in? They get recorded on the item and can’t claim it.</p>' +
+    '<label for="finderSel">Found by</label><select id="finderSel">' + opts + '</select>' +
+    '<div class="row"><button class="btn ghost" data-close>Cancel</button><button class="btn dark" id="dlgGo">Mark found</button></div>', (d) => {
+      d.querySelector('#dlgGo').onclick = async () => { const k = d.querySelector('#finderSel').value; closeDialog(); await runTx('Mark #' + id + ' found', S.role, 'markFound', [id, ADDR[k]]); };
+    });
+}
+
+/* ---------- dialogs ---------- */
+function openDialog(html, onOpen) {
+  $('dlgBody').innerHTML = html;
+  const d = $('dlg');
+  if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+  d.querySelectorAll('[data-close]').forEach((b) => b.onclick = closeDialog);
+  if (onOpen) onOpen(d);
+}
+function closeDialog() { const d = $('dlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+
+/* ---------- rendering ---------- */
+function setBusy(b) { document.querySelectorAll('[data-tx]').forEach((x) => x.disabled = b); }
+const eth = (v) => v === undefined ? '…' : Number(ethers.formatEther(v)).toFixed(4);
+
+function setHTML(id, html) { const el = $(id); if (el.innerHTML !== html) el.innerHTML = html; }
+
+function render() {
+  const chip = $('netChip');
+  if (S.online) { chip.className = 'chip ok'; chip.innerHTML = '<span class="dot"></span><span>Live on Sepolia</span>'; }
+  else { chip.className = 'chip warn'; chip.innerHTML = '<span class="dot"></span><span>' + (S.loaded ? 'Reconnecting…' : 'Connecting…') + '</span>'; }
+
+  setHTML('roles', '<span class="lbl">Acting as</span>' + ROLES.map((r) => '<button data-role="' + r.k + '" class="' + (S.role === r.k ? 'on' : '') + '">' + ROLE_INFO[r.k].name + '<small>' + short(ADDR[r.k]) + '</small></button>').join(''));
+
+  const n = [];
+  if (S.readErr && !S.loaded) n.push('<div class="notice warn"><p>Can’t reach the Sepolia network right now. Retrying automatically…</p></div>');
+  if (S.address && S.bal.desk !== undefined && S.bal.desk < ethers.parseEther('0.003')) n.push('<div class="notice warn"><p><b>The Desk is low on test ETH</b> (' + eth(S.bal.desk) + ' ETH). It pays the fees for every role. Request more from the faucet for <span class="mono">' + ADDR.desk + '</span></p><button class="btn ghost small" data-copy="desk">Copy address</button><a class="btn dark small" href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noopener">Open faucet</a></div>');
+  setHTML('notices', n.join(''));
+
+  const ready = !!S.address;
+  $('setup').hidden = ready || !S.loaded;
+  $('app').hidden = !ready;
+  if (!ready) { renderSetup(); renderFooter(); return; }
+
+  renderRole(); renderDesk(); renderClaimSelect(); renderItems(); renderRecent(); renderFooter();
+  $('liveNote').textContent = S.readErr ? 'Reconnecting… (retrying automatically)' : 'Updates automatically every few seconds.';
+}
+
+function renderSetup() {
+  $('deskAddr').textContent = ADDR.desk;
+  const funded = S.bal.desk !== undefined && S.bal.desk > ethers.parseEther('0.002');
+  $('deskBal').innerHTML = S.bal.desk === undefined ? 'Checking balance…' : (funded ? '✓ Desk has ' + eth(S.bal.desk) + ' test ETH. Ready.' : '<i class="spin" style="border-color:#5B6B76;border-top-color:transparent"></i>Waiting for test ETH… (now ' + eth(S.bal.desk) + ' ETH, checks every few seconds)');
+  $('ss1').classList.toggle('done', funded);
+  $('deployBtn').disabled = !funded || S.busy;
+}
+
+function renderRole() {
+  const k = S.role, info = ROLE_INFO[k];
+  const mine = S.items.filter((i) => same(i.owner, ADDR[k])).length;
+  const found = S.items.filter((i) => same(i.finder, ADDR[k])).length;
+  const bits = [];
+  if (mine) bits.push('reported ' + mine);
+  if (found) bits.push('found ' + found);
+  setHTML('rolePanel', '<p class="sub">You are acting as</p><div class="who">' + info.long + '</div><span class="badge b-you mono">' + short(ADDR[k]) + ' · ' + eth(S.bal[k]) + ' ETH</span>' +
+    '<p class="sub">' + info.text + '</p>' + (bits.length ? '<p class="hint">This account has ' + bits.join(' and ') + ' item(s).</p>' : '') +
+    '<p class="hint">Switch role with the buttons at the top, just like switching accounts in Remix.</p>');
+}
+
+function renderDesk() {
+  const lost = S.items.filter((i) => i.status === 0), claimed = S.items.filter((i) => i.status === 2);
+  const todo = '<p class="sub"><b>To do:</b> ' + lost.length + ' waiting to be marked found, ' + claimed.length + ' waiting to be returned.</p><p class="hint">Use the buttons on each item in the list.</p>';
+  setHTML('deskBody', S.role === 'desk' ? todo : '<div class="locked">You’re acting as ' + ROLE_INFO[S.role].name + '. The desk buttons on items still show, so you can try them and see the contract reject you. Switch to <b>Desk</b> to use them for real.</div>');
+}
+
+function renderClaimSelect() {
+  const sel = $('claimItem');
+  const avail = S.items.filter((i) => i.status === 1);
+  const sig = avail.map((i) => i.id + i.category).join('|');
+  if (sel.dataset.sig !== sig) {
+    const keep = sel.value;
+    sel.dataset.sig = sig;
+    sel.innerHTML = avail.length ? avail.map((i) => '<option value="' + i.id + '">#' + i.id + ' · ' + esc(i.category) + '</option>').join('') : '<option value="">No found items to claim yet</option>';
+    if (avail.some((i) => String(i.id) === keep)) sel.value = keep;
+  }
+  $('claimBtn').disabled = !avail.length || S.busy;
+}
+
+function renderItems() {
+  $('countBadge').textContent = S.items.length + (S.items.length === 1 ? ' item' : ' items');
+  const sig = JSON.stringify([S.items, S.role, S.filter]);
+  if (sig === S.lastSig) return;
+  S.lastSig = sig;
+  const me = ADDR[S.role];
+  const list = S.items.filter((i) => S.filter === 'all' || String(i.status) === S.filter).slice().reverse();
+  if (!list.length) { $('items').innerHTML = '<div class="empty">' + (S.items.length ? 'No items with this status.' : 'No items reported yet. Pick Owner at the top and report one.') + '</div>'; return; }
+  $('items').innerHTML = list.map((i) => {
+    const you = [];
+    if (same(i.owner, me)) you.push('<span class="badge b-you">You reported this</span>');
+    if (same(i.finder, me)) you.push('<span class="badge b-you">You found this</span>');
+    const acts = [];
+    if (i.status === 0) acts.push('<button class="btn dark small" data-tx data-act="found" data-id="' + i.id + '">Mark found</button>');
+    if (i.status === 1) acts.push('<button class="btn teal small" data-act="claim" data-id="' + i.id + '">Claim this</button>');
+    if (i.status === 2) acts.push('<button class="btn dark small" data-tx data-act="returned" data-id="' + i.id + '">Mark returned</button>');
+    const facts = ['<dt>Reported by</dt><dd>' + addrLink(i.owner) + '</dd>'];
+    if (i.finder !== ZERO) facts.push('<dt>Found by</dt><dd>' + addrLink(i.finder) + '</dd>');
+    if (i.claimant !== ZERO) facts.push('<dt>Claimed by</dt><dd>' + addrLink(i.claimant) + '</dd>');
+    facts.push('<dt>Secret hash</dt><dd class="mono">' + i.secretHash.slice(0, 14) + '…' + i.secretHash.slice(-8) + '</dd>');
+    return '<div class="item"><div class="item-top"><span class="id">#' + i.id + '</span><span class="cat">' + esc(i.category) + '</span><span class="badge ' + BADGE[i.status] + '">' + STATUS[i.status] + '</span></div>' +
+      (you.length ? '<div class="row" style="margin-top:8px">' + you.join('') + '</div>' : '') +
+      '<div class="track">' + STATUS.map((_, k) => '<div class="' + (k <= i.status ? 'on' : '') + '"></div>').join('') + '</div>' +
+      '<div class="track-labels">' + STATUS.map((s, k) => '<span class="' + (k === i.status ? 'on' : '') + '">' + s + '</span>').join('') + '</div>' +
+      '<dl class="facts">' + facts.join('') + '</dl>' +
+      (acts.length ? '<div class="item-actions">' + acts.join('') + '</div>' : '') + '</div>';
+  }).join('');
+  setBusy(S.busy);
+}
+
+function addRecent(label, hash) {
+  const r = store.get('recent', []);
+  r.unshift({ label, hash, at: Date.now() });
+  store.set('recent', r.slice(0, 15));
+  renderRecent();
+}
+function renderRecent() {
+  const r = store.get('recent', []);
+  setHTML('recent', r.length ? r.map((x) => '<div>' + esc(x.label) + ' · <span style="color:var(--muted)">' + new Date(x.at).toLocaleString() + '</span> · ' + txLink(x.hash) + '</div>').join('') : '<div style="border:0;color:var(--muted)">None yet.</div>');
+}
+function renderFooter() {
+  setHTML('contractInfo', S.address ? 'Contract: <a class="mono" href="' + CFG.explorer + '/address/' + S.address + '" target="_blank" rel="noopener">' + S.address + '</a>' : 'Contract not deployed yet.');
+  setHTML('accTable', '<tr><th>Role</th><th>Address</th><th>Test ETH</th></tr>' + ROLES.map((r) => '<tr><td>' + ROLE_INFO[r.k].name + '</td><td class="mono"><a href="' + CFG.explorer + '/address/' + ADDR[r.k] + '" target="_blank" rel="noopener">' + ADDR[r.k] + '</a></td><td>' + eth(S.bal[r.k]) + '</td></tr>').join(''));
+}
+
+/* ---------- toasts ---------- */
+function toast(title, body, kind, ttl) {
+  const el = document.createElement('div');
+  $('toasts').appendChild(el);
+  const all = $('toasts').children; while (all.length > 3) all[0].remove();
+  let timer;
+  const api = {
+    set(t, b, k, life) {
+      el.className = 'toast ' + (k === 'ok' ? 'ok' : k === 'bad' ? 'bad' : '');
+      el.innerHTML = '<b>' + (k === 'wait' ? '<i class="spin"></i>' : '') + esc(t) + '</b><span>' + b + '</span>';
+      clearTimeout(timer);
+      if (k !== 'wait') timer = setTimeout(() => el.remove(), life || (k === 'bad' ? 9000 : 5000));
+    },
+  };
+  api.set(title, esc(body), kind, ttl);
+  return api;
+}
+
+function updateHash() { const s = norm($('secret').value); $('hashPreview').textContent = s ? hashOf(s) : '—'; }
+
+/* ---------- events ---------- */
+document.addEventListener('click', async (e) => {
+  const rb = e.target.closest('[data-role]');
+  if (rb) { S.role = rb.dataset.role; store.set('role', S.role); S.lastSig = ''; $('claimResult').className = 'result'; render(); return; }
+  const cp = e.target.closest('[data-copy]');
+  if (cp) { try { await navigator.clipboard.writeText(ADDR[cp.dataset.copy]); toast('Copied', ADDR[cp.dataset.copy], 'ok', 3000); } catch { toast('Copy this address', ADDR[cp.dataset.copy], 'ok', 10000); } return; }
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const id = Number(b.dataset.id);
+  if (b.dataset.act === 'found') dlgFound(id);
+  if (b.dataset.act === 'returned') await runTx('Mark #' + id + ' returned', S.role, 'markReturned', [id]);
+  if (b.dataset.act === 'claim') { $('claimItem').value = String(id); $('claimCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => $('claimSecret').focus(), 350); }
+});
+$('reportBtn').onclick = doReport;
+$('claimBtn').onclick = doClaim;
+$('deployBtn').onclick = doDeploy;
+$('secret').addEventListener('input', updateHash);
+$('cat').addEventListener('change', () => { $('catOther').hidden = $('cat').value !== '__other'; });
+$('filters').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-f]'); if (!b) return;
+  S.filter = b.dataset.f;
+  $('filters').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+  renderItems();
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+
+/* ---------- start ---------- */
+render();
+refresh();
+setInterval(() => { if (!document.hidden && !S.busy) refresh(); }, CFG.POLL_MS);
+})();
+</script>
+</body>
+</html>
