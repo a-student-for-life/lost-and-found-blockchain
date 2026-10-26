@@ -3,8 +3,9 @@ pragma solidity ^0.8.20;
 
 /// @title Simple Privacy-Friendly Lost-and-Found
 /// @notice The owner reports a lost item but stores only a HASH of a secret
-///         detail, not the detail itself. A claimant must give the detail that
-///         matches the hash. The lost-and-found desk (custodian) records the return.
+///         detail, not the detail itself. The finder hands the item in, the desk
+///         (custodian) confirms it, a claimant must give the detail that matches
+///         the hash, and the desk records the return.
 contract SimpleLostAndFound {
     enum Status { Lost, Found, Claimed, Returned }
 
@@ -22,6 +23,7 @@ contract SimpleLostAndFound {
     mapping(uint256 => Item) public items;
 
     event ItemReported(uint256 itemId, string category);
+    event ItemHandedIn(uint256 itemId, address finder);
     event ItemFound(uint256 itemId, address finder);
     event ItemClaimed(uint256 itemId, address claimant);
     event ItemReturned(uint256 itemId, address claimant, address finder);
@@ -42,15 +44,26 @@ contract SimpleLostAndFound {
         emit ItemReported(itemCount, category);
     }
 
-    // 2. Finder hands the item to the desk; desk logs it and records the finder
-    function markFound(uint256 itemId, address finder) public onlyCustodian {
-        require(items[itemId].status == Status.Lost, "Item is not in Lost state");
-        items[itemId].status = Status.Found;
-        items[itemId].finder = finder;
-        emit ItemFound(itemId, finder);
+    // 2. Finder hands the item in to the desk and gets recorded
+    function handIn(uint256 itemId) public {
+        Item storage it = items[itemId];
+        require(itemId > 0 && itemId <= itemCount, "No such item");
+        require(it.status == Status.Lost, "Item is not in Lost state");
+        require(it.finder == address(0), "Item already handed in");
+        require(msg.sender != it.owner, "Owner cannot hand in own item");
+        it.finder = msg.sender;
+        emit ItemHandedIn(itemId, msg.sender);
     }
 
-    // 3. Claimant gives the secret detail; the contract checks it against the hash
+    // 3. Desk confirms it has received the item
+    function markFound(uint256 itemId) public onlyCustodian {
+        require(items[itemId].status == Status.Lost, "Item is not in Lost state");
+        require(items[itemId].finder != address(0), "No finder has handed it in yet");
+        items[itemId].status = Status.Found;
+        emit ItemFound(itemId, items[itemId].finder);
+    }
+
+    // 4. Claimant gives the secret detail; the contract checks it against the hash
     function claimItem(uint256 itemId, string memory secretDetail) public {
         Item storage it = items[itemId];
         require(it.status == Status.Found, "Item is not available to claim");
@@ -61,7 +74,7 @@ contract SimpleLostAndFound {
         emit ItemClaimed(itemId, msg.sender);
     }
 
-    // 4. Desk records that the item was physically returned
+    // 5. Desk records that the item was physically returned
     function markReturned(uint256 itemId) public onlyCustodian {
         require(items[itemId].status == Status.Claimed, "No verified claim yet");
         items[itemId].status = Status.Returned;
